@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slice Case Study — Billing Transparency</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --purple: #5A2D9B;
+  --purple-mid: #7B4FBF;
+  --purple-light: #C4A8F0;
+  --purple-tint: #F4F1FB;
+  --purple-border: #E8E0F5;
+  --danger: #FF3B30;
+  --danger-bg: #FFF0F0;
+  --danger-dark: #CC0000;
+  --success: #34C759;
+  --success-bg: #EDFFF3;
+  --success-dark: #1A7F3C;
+  --warning: #FF9500;
+  --warning-bg: #FFF8EE;
+  --alert: #FFB800;
+  --alert-bg: #FFF8E7;
+  --info: #0066CC;
+  --info-bg: #EBF5FF;
+  --text-primary: #1C1C1E;
+  --text-secondary: #555;
+  --text-tertiary: #888;
+  --border: #E8E0F5;
+  --white: #fff;
+  --bg: #F7F5FC;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text-primary); line-height: 1.6; }
+
+/* NAV */
+.cs-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; background: rgba(90,45,155,0.97); backdrop-filter: blur(12px); display: flex; align-items: center; justify-content: space-between; padding: 0 40px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.nav-logo { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: #fff; padding: 16px 0; letter-spacing: -0.3px; }
+.nav-logo span { color: var(--purple-light); }
+.nav-links { display: flex; gap: 0; }
+.nav-link { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.6); padding: 18px 16px; cursor: pointer; text-decoration: none; transition: color 0.15s; border-bottom: 2px solid transparent; }
+.nav-link:hover { color: #fff; }
+.nav-meta { font-size: 11px; color: rgba(255,255,255,0.5); font-family: 'DM Mono', monospace; }
+
+/* HERO */
+.hero { background: linear-gradient(135deg, #3A1870 0%, #5A2D9B 45%, #7B4FBF 100%); min-height: 100vh; display: flex; align-items: center; padding: 120px 80px 80px; position: relative; overflow: hidden; }
+.hero::before { content: ''; position: absolute; top: -100px; right: -100px; width: 600px; height: 600px; border-radius: 50%; background: radial-gradient(circle, rgba(196,168,240,0.15) 0%, transparent 70%); }
+.hero::after { content: ''; position: absolute; bottom: -150px; left: -50px; width: 400px; height: 400px; border-radius: 50%; background: radial-gradient(circle, rgba(90,45,155,0.4) 0%, transparent 70%); }
+.hero-content { max-width: 700px; position: relative; z-index: 1; }
+.hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--purple-light); text-transform: uppercase; letter-spacing: 0.15em; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+.hero-eyebrow::before { content: ''; display: block; width: 32px; height: 1px; background: var(--purple-light); }
+.hero-title { font-family: 'Fraunces', serif; font-size: clamp(42px, 6vw, 72px); font-weight: 900; color: #fff; line-height: 1.05; letter-spacing: -1.5px; margin-bottom: 24px; }
+.hero-title em { font-style: italic; color: var(--purple-light); }
+.hero-desc { font-size: 17px; color: rgba(255,255,255,0.7); line-height: 1.7; margin-bottom: 40px; max-width: 540px; font-weight: 300; }
+.hero-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 48px; }
+.hero-tag { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 500; }
+.hero-stats { display: flex; gap: 40px; }
+.hero-stat-num { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 700; color: #fff; line-height: 1; }
+.hero-stat-label { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* SCROLL INDICATOR */
+.scroll-ind { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; z-index: 1; }
+.scroll-line { width: 1px; height: 40px; background: linear-gradient(to bottom, rgba(255,255,255,0.4), transparent); animation: scrollpulse 2s ease-in-out infinite; }
+@keyframes scrollpulse { 0%,100% { opacity: 0.4; transform: scaleY(1); } 50% { opacity: 1; transform: scaleY(1.2); } }
+
+/* SECTIONS */
+.cs-section { padding: 80px 80px; max-width: 1100px; margin: 0 auto; }
+.cs-section-full { padding: 80px 0; }
+.section-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--purple); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+.section-eyebrow::before { content: ''; display: block; width: 20px; height: 1px; background: var(--purple); }
+.section-title { font-family: 'Fraunces', serif; font-size: clamp(28px, 4vw, 44px); font-weight: 700; color: var(--text-primary); letter-spacing: -0.8px; line-height: 1.15; margin-bottom: 16px; }
+.section-lead { font-size: 17px; color: var(--text-secondary); line-height: 1.7; max-width: 680px; font-weight: 300; margin-bottom: 48px; }
+
+/* DIVIDER */
+.cs-divider { height: 1px; background: var(--border); margin: 0 80px; }
+
+/* STAT ROW */
+.stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 56px; }
+.stat-cell { background: var(--white); padding: 28px 24px; }
+.stat-cell:first-child { border-radius: 16px 0 0 16px; }
+.stat-cell:last-child { border-radius: 0 16px 16px 0; }
+.stat-num { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 700; color: var(--purple); line-height: 1; margin-bottom: 6px; }
+.stat-label { font-size: 12px; color: var(--text-tertiary); line-height: 1.4; }
+
+/* METHODS */
+.methods-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 48px; }
+.method-card { background: var(--white); border-radius: 14px; padding: 22px; border: 1px solid var(--border); }
+.method-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 14px; }
+.method-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.method-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+
+/* FINDINGS */
+.findings-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 48px; }
+.finding-card { background: var(--white); border-radius: 14px; padding: 20px 22px; border: 1px solid var(--border); display: flex; gap: 16px; align-items: flex-start; }
+.finding-card.highlight { border-color: var(--alert); background: var(--alert-bg); }
+.finding-num { width: 28px; height: 28px; border-radius: 50%; background: var(--danger-bg); color: var(--danger-dark); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+.finding-num.star { background: var(--alert-bg); color: #886600; }
+.finding-text { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+.finding-text strong { font-weight: 600; color: var(--text-primary); }
+.new-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: var(--alert-bg); color: #886600; border: 1px solid var(--alert); margin-left: 6px; vertical-align: middle; }
+
+/* QUOTES */
+.quotes-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 48px; }
+.quote-card { background: var(--white); border-radius: 14px; padding: 22px; border: 1px solid var(--border); position: relative; }
+.quote-card.primary { border-color: var(--danger); }
+.quote-mark { font-family: 'Fraunces', serif; font-size: 64px; color: var(--purple-light); line-height: 0.5; margin-bottom: 12px; display: block; }
+.quote-text { font-size: 14px; color: var(--text-primary); line-height: 1.75; font-style: italic; margin-bottom: 14px; }
+.quote-source { font-size: 11px; color: var(--text-tertiary); font-family: 'DM Mono', monospace; display: flex; align-items: center; gap: 8px; }
+.quote-badge { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+.badge-red { background: var(--danger-bg); color: var(--danger-dark); }
+.badge-amber { background: var(--alert-bg); color: #886600; }
+
+/* SEGMENTS */
+.segments-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 48px; }
+.seg-card { background: var(--white); border-radius: 14px; padding: 20px; border: 1px solid var(--border); }
+.seg-card.target { border-color: var(--danger); border-width: 1.5px; }
+.seg-dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: 12px; }
+.seg-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.seg-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.seg-tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; margin-left: 6px; background: var(--danger-bg); color: var(--danger-dark); }
+
+/* PROBLEM STATEMENT */
+.ps-block { background: var(--purple); border-radius: 20px; padding: 40px 48px; margin-bottom: 56px; }
+.ps-label { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--purple-light); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 16px; }
+.ps-text { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 400; color: #fff; line-height: 1.7; }
+.ps-text em { font-style: italic; color: var(--purple-light); }
+.ps-sources { margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.5); font-family: 'DM Mono', monospace; }
+
+/* PERSONA */
+.persona-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+.persona-card { background: var(--white); border-radius: 20px; border: 1px solid var(--border); overflow: hidden; }
+.persona-header { background: linear-gradient(135deg, #3A1870, #5A2D9B); padding: 28px; }
+.persona-avatar { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 14px; }
+.persona-name { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.persona-tagline { font-size: 13px; color: rgba(255,255,255,0.6); }
+.persona-body { padding: 24px 28px; }
+.persona-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.persona-item { background: var(--purple-tint); border-radius: 10px; padding: 10px 12px; }
+.pi-label { font-size: 10px; color: var(--text-tertiary); margin-bottom: 2px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.pi-val { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+.persona-section-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 8px; }
+.persona-bullet { display: flex; gap: 8px; margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); line-height: 1.55; }
+.persona-bullet::before { content: '—'; color: var(--purple); flex-shrink: 0; margin-top: 1px; }
+.persona-quote { border-left: 3px solid var(--purple); padding-left: 14px; font-style: italic; font-size: 14px; color: var(--text-primary); line-height: 1.65; margin-top: 16px; }
+.pain-goal-wrap { display: flex; flex-direction: column; gap: 12px; }
+.pain-item { background: var(--danger-bg); border: 1px solid #FFD0D0; border-radius: 12px; padding: 14px 16px; }
+.pain-title { font-size: 12px; font-weight: 700; color: var(--danger-dark); margin-bottom: 4px; }
+.pain-desc { font-size: 12px; color: #993333; line-height: 1.55; }
+.goal-item { background: var(--success-bg); border: 1px solid #B0EEC8; border-radius: 12px; padding: 14px 16px; }
+.goal-title { font-size: 12px; font-weight: 700; color: var(--success-dark); margin-bottom: 4px; }
+.goal-desc { font-size: 12px; color: #1A5C30; line-height: 1.55; }
+
+/* JOURNEY */
+.journey-wrap { background: var(--white); border-radius: 20px; border: 1px solid var(--border); padding: 32px; margin-bottom: 48px; }
+.journey-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 24px; }
+.journey-steps { display: flex; gap: 0; position: relative; }
+.journey-steps::before { content: ''; position: absolute; top: 20px; left: 20px; right: 20px; height: 2px; background: var(--border); z-index: 0; }
+.journey-step { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+.js-dot { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 10px; border: 2px solid var(--white); }
+.js-label { font-size: 11px; font-weight: 600; color: var(--text-primary); text-align: center; margin-bottom: 3px; }
+.js-emotion { font-size: 10px; color: var(--text-tertiary); text-align: center; }
+
+/* IDEATION */
+.ideas-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 32px; }
+.idea-card { background: var(--white); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; }
+.idea-card.chosen { border-color: var(--purple); border-width: 2px; }
+.idea-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 14px; }
+.idea-letter { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.letter-neutral { background: var(--purple-tint); color: var(--text-tertiary); }
+.letter-chosen { background: var(--purple); color: #fff; }
+.idea-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.idea-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.idea-verdict { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; margin-left: 8px; }
+.verdict-reject { background: var(--danger-bg); color: var(--danger-dark); }
+.verdict-chosen { background: var(--success-bg); color: var(--success-dark); }
+.idea-body { padding: 20px 24px; }
+.pros-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.pros { background: var(--success-bg); border-radius: 10px; padding: 12px 14px; }
+.cons { background: var(--danger-bg); border-radius: 10px; padding: 12px 14px; }
+.pc-label { font-size: 10px; font-weight: 700; margin-bottom: 6px; }
+.pros .pc-label { color: var(--success-dark); }
+.cons .pc-label { color: var(--danger-dark); }
+.pc-item { font-size: 12px; line-height: 1.5; margin-bottom: 4px; }
+.pros .pc-item { color: #1A5C30; }
+.cons .pc-item { color: #993333; }
+.score-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.score-pill { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); background: var(--purple-tint); border-radius: 20px; padding: 4px 10px; }
+.pill-dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-high { background: var(--success); }
+.dot-mid { background: var(--alert); }
+.dot-low { background: var(--danger); }
+.chosen-reason { background: var(--purple-tint); border-radius: 10px; padding: 12px 14px; margin-top: 12px; font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.chosen-reason strong { color: var(--purple); font-weight: 600; }
+
+/* COMPARISON TABLE */
+.compare-wrap { background: var(--white); border-radius: 16px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 48px; }
+.compare-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.compare-table th { padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); background: var(--purple-tint); }
+.compare-table th.chosen-col { color: var(--purple); }
+.compare-table td { padding: 11px 16px; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: top; line-height: 1.5; }
+.compare-table tr:last-child td { border-bottom: none; }
+.compare-table td:first-child { font-weight: 600; color: var(--text-primary); }
+.compare-table td.win { color: var(--success-dark); font-weight: 600; background: rgba(52,199,89,0.06); }
+
+/* PRINCIPLES */
+.principles-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 48px; }
+.principle-card { background: var(--white); border-radius: 14px; padding: 22px; border: 1px solid var(--border); }
+.principle-icon { font-size: 20px; margin-bottom: 10px; }
+.principle-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.principle-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+
+/* SCREENS */
+.screens-section { background: #1A0A3A; padding: 80px; }
+.screens-section .section-eyebrow { color: var(--purple-light); }
+.screens-section .section-eyebrow::before { background: var(--purple-light); }
+.screens-section .section-title { color: #fff; }
+.screens-section .section-lead { color: rgba(255,255,255,0.6); }
+.screens-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 40px; max-width: 1100px; margin: 0 auto; }
+.screen-wrap { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.screen-badge { font-size: 11px; font-weight: 700; color: var(--purple-light); text-transform: uppercase; letter-spacing: 0.08em; text-align: center; }
+.screen-num-label { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 700; color: #fff; }
+.phone { width: 200px; height: 400px; background: #fff; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); overflow: hidden; position: relative; border: 2px solid rgba(255,255,255,0.1); flex-shrink: 0; }
+.phone.before { border-color: rgba(255,59,48,0.5); }
+.phone.hero-phone { border-color: rgba(90,45,155,0.8); box-shadow: 0 20px 60px rgba(90,45,155,0.4), 0 0 0 1px rgba(90,45,155,0.3); }
+.phone.success-phone { border-color: rgba(52,199,89,0.5); }
+.ann-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 14px 16px; width: 200px; }
+.ann-card strong { font-size: 11px; font-weight: 700; color: var(--purple-light); display: block; margin-bottom: 6px; }
+.ann-item { display: flex; gap: 6px; margin-bottom: 5px; align-items: flex-start; }
+.ann-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.ann-text { font-size: 10px; color: rgba(255,255,255,0.6); line-height: 1.45; }
+
+/* Phone internals */
+.ph-status { display: flex; justify-content: space-between; padding: 6px 12px 0; font-size: 9px; font-weight: 700; }
+.ph-header { padding: 8px 12px 10px; }
+.ph-back { font-size: 8px; margin-bottom: 1px; }
+.ph-title { font-size: 13px; font-weight: 800; }
+.ph-sub { font-size: 8px; margin-top: 1px; }
+.ph-card { margin: 8px 10px; background: #F8F4FF; border-radius: 10px; padding: 10px 12px; }
+.ph-card-label { font-size: 8px; color: #888; }
+.ph-card-amount { font-size: 20px; font-weight: 800; color: #1C1C1E; }
+.ph-card-due { font-size: 8px; color: #888; margin-top: 2px; }
+.ph-input-wrap { margin: 6px 10px; }
+.ph-input-label { font-size: 8px; color: #888; margin-bottom: 3px; }
+.ph-input { border: 1.5px solid #5A2D9B; border-radius: 7px; padding: 7px 10px; font-size: 13px; font-weight: 700; width: 100%; background: #fff; }
+.ph-input.warn-input { border-color: #FF9500; background: #FFF8EE; }
+.ph-input-hint { font-size: 7.5px; margin-top: 2px; }
+.ph-chips { display: flex; gap: 6px; margin: 5px 10px; }
+.ph-chip { border-radius: 20px; padding: 4px 9px; font-size: 8px; font-weight: 700; }
+.chip-sel { background: #5A2D9B; color: #fff; }
+.chip-unsel { background: #fff; border: 1px solid #CCC; color: #555; }
+.chip-danger { background: #FFF0F0; border: 1px solid #FF3B30; color: #CC0000; }
+.ph-warn { margin: 5px 10px; background: #FFF3F3; border: 1.5px solid #FF3B30; border-radius: 8px; padding: 8px 10px; }
+.ph-warn-head { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+.ph-warn-title { font-size: 8px; font-weight: 800; color: #CC0000; }
+.ph-warn-pill { background: #FF3B30; color: #fff; border-radius: 20px; padding: 1px 5px; font-size: 7px; font-weight: 800; margin-left: auto; }
+.ph-warn-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
+.ph-warn-lbl { font-size: 7.5px; color: #993333; }
+.ph-warn-val { font-size: 7.5px; font-weight: 700; color: #CC0000; }
+.ph-warn-div { height: 1px; background: #FFCCCC; margin: 4px 0; }
+.ph-warn-link { font-size: 7px; color: #5A2D9B; text-decoration: underline; margin-top: 3px; }
+.ph-green { margin: 5px 10px; background: #EDFFF3; border: 1.5px solid #34C759; border-radius: 8px; padding: 8px 10px; font-size: 8px; font-weight: 700; color: #1A7F3C; }
+.ph-cta { margin: 6px 10px 0; background: #5A2D9B; border-radius: 9px; padding: 9px; text-align: center; font-size: 10px; font-weight: 800; color: #fff; }
+.ph-cta.bottom-cta { position: absolute; bottom: 12px; left: 10px; right: 10px; margin: 0; }
+.ph-slider-label { margin: 4px 12px 3px; font-size: 8px; color: #888; }
+.ph-slider-track { margin: 0 12px; height: 4px; background: #E0D6F5; border-radius: 2px; position: relative; }
+.ph-slider-fill { position: absolute; left:0;top:0; width:100%; height:100%; background:#5A2D9B; border-radius:2px; }
+.ph-slider-thumb { position: absolute; right:-8px; top:-6px; width:16px; height:16px; border-radius:50%; background:#5A2D9B; border:2px solid #fff; box-shadow:0 2px 4px rgba(0,0,0,0.2); }
+.ph-amounts { display: flex; justify-content: space-between; margin: 3px 12px; font-size: 8px; color: #888; }
+.ph-btns { margin: 6px 10px 0; display: flex; flex-direction: column; gap: 6px; }
+.ph-btn-full { background: #5A2D9B; border-radius: 8px; padding: 9px; text-align: center; font-size: 9px; font-weight: 700; color: #fff; }
+.ph-btn-min { background: #fff; border: 1px solid #E0D6F5; border-radius: 8px; padding: 9px; text-align: center; font-size: 9px; font-weight: 700; color: #5A2D9B; }
+.redcircle { position: absolute; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #FF3B30; background: rgba(255,59,48,0.12); display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #FF3B30; }
+/* Modal */
+.modal-overlay { position: absolute; top:0;left:0;right:0;bottom:0; background: rgba(0,0,0,0.4); display: flex; align-items: flex-end; }
+.modal-sheet { background: #fff; border-radius: 14px 14px 0 0; padding: 0 12px 12px; width: 100%; }
+.modal-handle { width: 28px; height: 3px; background: #E0E0E0; border-radius: 2px; margin: 8px auto 10px; }
+.modal-title { font-size: 11px; font-weight: 800; color: #1C1C1E; margin-bottom: 7px; }
+.modal-row { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 0.5px solid #F0F0F0; }
+.mr-lbl { font-size: 8px; color: #888; }
+.mr-val { font-size: 8px; font-weight: 700; }
+.mr-val.red { color: #FF3B30; }
+.mr-val.big { font-size: 10px; color: #CC0000; }
+.modal-tip { background: #EBF5FF; border-radius: 6px; padding: 6px 8px; margin: 6px 0; font-size: 7.5px; color: #004499; line-height: 1.5; }
+.modal-btn-p { background: #5A2D9B; border-radius: 7px; padding: 7px; text-align: center; font-size: 9px; font-weight: 800; color: #fff; margin-bottom: 3px; }
+.modal-btn-s { text-align: center; font-size: 7.5px; color: #999; padding: 3px; }
+/* Success screen */
+.suc-body { display: flex; flex-direction: column; align-items: center; padding: 16px 12px 55px; }
+.suc-check { width: 50px; height: 50px; border-radius: 50%; background: #34C759; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(52,199,89,0.35); }
+.suc-check svg { width: 24px; height: 24px; }
+.suc-title { font-size: 14px; font-weight: 800; color: #1C1C1E; margin-bottom: 2px; }
+.suc-sub { font-size: 8px; color: #888; margin-bottom: 10px; }
+.suc-hero-box { background: #EDFFF3; border: 1.5px solid #34C759; border-radius: 10px; padding: 10px 12px; width: 100%; margin-bottom: 8px; text-align: center; }
+.suc-hero-text { font-size: 9px; font-weight: 800; color: #1A7F3C; line-height: 1.6; }
+.suc-summary { background: #F8F4FF; border-radius: 8px; padding: 8px 10px; width: 100%; }
+.suc-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.suc-lbl { font-size: 7.5px; color: #888; }
+.suc-val { font-size: 7.5px; font-weight: 700; color: #1C1C1E; }
+.suc-val.green { color: #1A7F3C; }
+/* Home */
+.home-header { background: linear-gradient(135deg, #3A1870, #5A2D9B); padding: 10px 12px 14px; }
+.home-greet { font-size: 8px; color: rgba(255,255,255,0.6); }
+.home-name { font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.home-limit-lbl { font-size: 8px; color: rgba(255,255,255,0.5); }
+.home-limit { font-size: 18px; font-weight: 800; color: #fff; }
+.nudge-card-ph { margin: 10px 10px 0; background: #FFF8E7; border: 1.5px solid #FFB800; border-radius: 12px; padding: 10px 11px; position: relative; }
+.nudge-close { position: absolute; top: 7px; right: 9px; font-size: 11px; color: #999; }
+.nudge-header { display: flex; align-items: center; gap: 5px; margin-bottom: 7px; }
+.nudge-title { font-size: 9px; font-weight: 800; color: #1C1C1E; flex: 1; }
+.nudge-pill { background: #FF3B30; color: #fff; border-radius: 20px; padding: 2px 6px; font-size: 7px; font-weight: 800; }
+.nudge-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.nudge-lbl { font-size: 8px; color: #664400; }
+.nudge-val { font-size: 8px; font-weight: 700; }
+.nudge-val.g { color: #1A7F3C; }
+.nudge-val.r { color: #CC0000; }
+.nudge-divider { height: 1px; background: #FFE0A0; margin: 4px 0; }
+.nudge-btn { background: #5A2D9B; border-radius: 7px; padding: 6px; text-align: center; font-size: 8.5px; font-weight: 800; color: #fff; margin-top: 7px; }
+.home-mini-cards { display: flex; gap: 7px; margin: 9px 10px 0; }
+.mini-card { flex: 1; background: #F8F4FF; border-radius: 8px; padding: 7px; text-align: center; }
+.mini-lbl { font-size: 7px; color: #888; margin-bottom: 2px; }
+.mini-val { font-size: 9px; font-weight: 700; color: #5A2D9B; }
+/* Edge case */
+.live-box { margin: 5px 10px; background: #FFF8EE; border: 1.5px solid #FF9500; border-radius: 8px; padding: 8px 10px; }
+.lb-head { font-size: 8px; font-weight: 800; color: #CC6600; margin-bottom: 4px; }
+.lb-row { display: flex; justify-content: space-between; padding: 2px 0; }
+.lb-lbl { font-size: 7.5px; color: #664400; }
+.lb-val { font-size: 7.5px; font-weight: 700; color: #1C1C1E; }
+.lb-val.orange { color: #CC6600; }
+.lb-div { height: 1px; background: #FFE0B0; margin: 3px 0; }
+.lb-total-lbl { font-size: 7.5px; font-weight: 800; color: #CC6600; }
+.lb-total-val { font-size: 8.5px; font-weight: 800; color: #CC6600; }
+.tip-box-ph { margin: 5px 10px; background: #EBF5FF; border-radius: 7px; padding: 7px 9px; font-size: 7.5px; color: #004499; line-height: 1.5; }
+
+/* METRICS */
+.metrics-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 32px; }
+.metric-card { background: var(--white); border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+.metric-card.primary { border-color: var(--purple); border-width: 1.5px; }
+.metric-icon { font-size: 24px; margin-bottom: 12px; }
+.metric-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.metric-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+.metric-target { display: inline-block; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 600; color: var(--purple); background: var(--purple-tint); padding: 4px 10px; border-radius: 6px; margin-top: 10px; }
+
+.abtest-wrap { background: var(--white); border-radius: 16px; border: 1px solid var(--border); padding: 28px 32px; margin-bottom: 48px; }
+.abtest-title { font-size: 16px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
+.abtest-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: center; margin-bottom: 24px; }
+.ab-box { background: var(--purple-tint); border-radius: 12px; padding: 18px 20px; border: 1px solid var(--border); }
+.ab-label { font-size: 11px; font-weight: 700; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+.ab-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px; }
+.ab-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+.vs-circle { width: 40px; height: 40px; border-radius: 50%; background: var(--purple); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+.abtest-specs { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+.abtest-spec { text-align: center; padding: 12px; background: var(--purple-tint); border-radius: 10px; }
+.abtest-spec-label { font-size: 10px; color: var(--text-tertiary); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.abtest-spec-val { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+
+/* LEARNINGS */
+.learnings-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; margin-bottom: 48px; }
+.learning-card { background: var(--white); border-radius: 16px; padding: 24px; border: 1px solid var(--border); }
+.learning-num { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 700; color: var(--purple-light); line-height: 1; margin-bottom: 12px; }
+.learning-title { font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px; }
+.learning-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.7; }
+
+/* NEXT STEPS */
+.next-steps { display: flex; flex-direction: column; gap: 12px; margin-bottom: 48px; }
+.next-step { display: flex; gap: 16px; align-items: flex-start; background: var(--white); border-radius: 14px; padding: 18px 20px; border: 1px solid var(--border); }
+.ns-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--purple-tint); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.ns-text { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+.ns-text strong { font-weight: 600; color: var(--text-primary); }
+
+/* FOOTER */
+.cs-footer { background: #1A0A3A; padding: 60px 80px; display: flex; justify-content: space-between; align-items: center; }
+.footer-logo { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; color: #fff; }
+.footer-logo span { color: var(--purple-light); }
+.footer-meta { font-size: 12px; color: rgba(255,255,255,0.4); text-align: right; font-family: 'DM Mono', monospace; line-height: 1.6; }
+
+/* UTILITY */
+.tag { display: inline-block; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+.bg-section { background: var(--white); }
+.mb-0 { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .cs-section { padding: 48px 24px; }
+  .hero { padding: 100px 24px 60px; }
+  .stat-row { grid-template-columns: repeat(2,1fr); }
+  .methods-grid, .segments-grid, .metrics-grid, .screens-grid { grid-template-columns: 1fr 1fr; }
+  .quotes-grid, .persona-wrap, .pros-cons, .learnings-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="cs-nav">
+  <div class="nav-logo">slice<span>/cs</span></div>
+  <div class="nav-links">
+    <a class="nav-link" href="#research">Research</a>
+    <a class="nav-link" href="#persona">Persona</a>
+    <a class="nav-link" href="#ideation">Ideation</a>
+    <a class="nav-link" href="#design">Design</a>
+    <a class="nav-link" href="#metrics">Metrics</a>
+    <a class="nav-link" href="#learnings">Learnings</a>
+  </div>
+  <div class="nav-meta">APM Case Study · 2026</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-eyebrow">Product Case Study</div>
+    <h1 class="hero-title">Slice doesn't tell you<br/>what <em>minimum due</em><br/>really costs.</h1>
+    <p class="hero-desc">First-time credit card users on Slice pay minimum due assuming it's safe — then get hit with unexpected interest and GST the next month. This case study redesigns the billing screen to show the consequence before payment, not after.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Associate Product Manager</span>
+      <span class="hero-tag">Fintech · India</span>
+      <span class="hero-tag">Billing UX</span>
+      <span class="hero-tag">Entry Level Portfolio</span>
+    </div>
+    <div class="hero-stats">
+      <div><div class="hero-stat-num">5</div><div class="hero-stat-label">Research Sources</div></div>
+      <div><div class="hero-stat-num">6</div><div class="hero-stat-label">Screens Designed</div></div>
+      <div><div class="hero-stat-num">3</div><div class="hero-stat-label">Solutions Explored</div></div>
+      <div><div class="hero-stat-num">2</div><div class="hero-stat-label">Problems Fixed</div></div>
+    </div>
+  </div>
+  <div class="scroll-ind"><div class="scroll-line"></div>scroll</div>
+</section>
+
+<!-- RESEARCH -->
+<section id="research" class="cs-section">
+  <div class="section-eyebrow">01 — Research</div>
+  <h2 class="section-title">What we found — and where</h2>
+  <p class="section-lead">Three research methods across five distinct sources. Every finding is grounded in real user evidence, not assumption.</p>
+
+  <div class="stat-row">
+    <div class="stat-cell"><div class="stat-num">5</div><div class="stat-label">Distinct research sources across 3 methods</div></div>
+    <div class="stat-cell"><div class="stat-num">3</div><div class="stat-label">User segments correctly identified and separated</div></div>
+    <div class="stat-cell"><div class="stat-num">#1</div><div class="stat-label">Billing confusion — top complaint across all sources</div></div>
+    <div class="stat-cell"><div class="stat-num">2</div><div class="stat-label">Confirmed UI bugs found during research</div></div>
+  </div>
+
+  <div class="methods-grid">
+    <div class="method-card">
+      <div class="method-icon" style="background:#EBF5FF;">👤</div>
+      <div class="method-title">User Interviews — 2 Participants</div>
+      <div class="method-desc">Conducted via WhatsApp. Identified a UPI-only user (User 1) and an informed card user who learned billing only from a physical manual (User 2). Correctly separated two distinct user segments and exposed a critical gap — the app never educates users at the payment moment.</div>
+    </div>
+    <div class="method-card">
+      <div class="method-icon" style="background:#FFF8E7;">📋</div>
+      <div class="method-title">Reddit Community Analysis</div>
+      <div class="method-desc">Reviewed r/IndiaFinance and r/CreditCardsIndia. Identified recurring complaints about minimum due confusion, unexpected interest charges, and GST — all from first-time credit card users aged 19–26.</div>
+    </div>
+    <div class="method-card">
+      <div class="method-icon" style="background:var(--danger-bg);">⭐</div>
+      <div class="method-title">Play Store Review Mining</div>
+      <div class="method-desc">Analyzed 1–2 star reviews from late 2025 to mid-2026. Billing confusion, the slider UI preventing exact payments, and autopay failures were the top recurring themes across hundreds of critical reviews.</div>
+    </div>
+  </div>
+
+  <div class="section-eyebrow" style="margin-top:0;">User Segments</div>
+  <div class="segments-grid">
+    <div class="seg-card target">
+      <div class="seg-dot" style="background:var(--danger);"></div>
+      <div class="seg-title">Confused card users <span class="seg-tag">Target segment</span></div>
+      <div class="seg-desc">Age 19–26. First credit card ever. Pay minimum due assuming it's safe. Get hit with interest and GST on the next statement. This is who this case study is designed for.</div>
+    </div>
+    <div class="seg-card">
+      <div class="seg-dot" style="background:var(--alert);"></div>
+      <div class="seg-title">Informed card users</div>
+      <div class="seg-desc">Understood billing — but only from a physical card manual received at signup, not from the app. Proves this is a systematic UI failure, not a user knowledge gap. (User 2)</div>
+    </div>
+    <div class="seg-card">
+      <div class="seg-dot" style="background:#CCC;"></div>
+      <div class="seg-title">UPI-only users</div>
+      <div class="seg-desc">Use Slice purely as a scanner and balance checker. No credit card interaction. A completely different problem. Excluded from this case study scope. (User 1)</div>
+    </div>
+  </div>
+
+  <div class="section-eyebrow" style="margin-top:0;">Key Findings</div>
+  <div class="findings-list">
+    <div class="finding-card">
+      <div class="finding-num">1</div>
+      <div class="finding-text"><strong>Minimum due is treated as interest-free:</strong> Users select "Pay Minimum Due" assuming the remaining balance carries forward without penalty — like a grace period. The app never corrects this assumption before payment is confirmed.</div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-num">2</div>
+      <div class="finding-text"><strong>Interest consequence is hidden until it's too late:</strong> The app shows no interest rate, no APR, and no projected charge before the user swipes to pay minimum due. Users only discover the consequence on their next statement — after the damage is done.</div>
+    </div>
+    <div class="finding-card highlight">
+      <div class="finding-num star">★</div>
+      <div class="finding-text"><strong>Even informed users rely on external materials, not the app <span class="new-tag">User 2 insight</span></strong><br/>User 2 understood billing only because of a physical card manual received 6 months ago — not because the app explained it. This proves the problem is a systematic UI failure affecting everyone, not just uninformed users. The app never guides anyone at payment — regardless of their knowledge level.</div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-num">3</div>
+      <div class="finding-text"><strong>GST on interest creates a second shock:</strong> Users hit by interest charges are then surprised by GST applied on top — a second unexpected charge the UI never warns about at any point in the payment flow.</div>
+    </div>
+    <div class="finding-card">
+      <div class="finding-num">4</div>
+      <div class="finding-text"><strong>The UI physically blocks exact payments:</strong> A slider-based payment UI forces rounded amounts (e.g., ₹4,500 or ₹5,000) when a user's actual bill is ₹4,780. Paying the exact amount owed is impossible. Confirmed by multiple Play Store reviews.</div>
+    </div>
+  </div>
+
+  <div class="section-eyebrow" style="margin-top:0;">User Voices</div>
+  <div class="quotes-grid">
+    <div class="quote-card primary">
+      <span class="quote-mark">"</span>
+      <div class="quote-text">I had a bill of ₹8,000 and paid the minimum due of ₹1,200 shown on the app, thinking the rest would carry over to next month normally. Now my new statement is showing massive interest charged on the remaining balance plus GST on that interest. Why didn't the app clearly warn me? This feels designed to trap college students who don't understand credit card math.</div>
+      <div class="quote-source">Reddit user — r/IndiaFinance <span class="quote-badge badge-red">Core evidence</span></div>
+    </div>
+    <div class="quote-card">
+      <span class="quote-mark">"</span>
+      <div class="quote-text">The app doesn't show the exact monthly interest rate or APR cleanly before I swipe to pay. The interface is too sleek for its own good — it hides real banking consequences behind pretty colors.</div>
+      <div class="quote-source">Fintech forum / YouTube comment <span class="quote-badge badge-amber">Supporting evidence</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="cs-divider"></div>
+
+<!-- PROBLEM STATEMENT -->
+<section class="cs-section">
+  <div class="section-eyebrow">02 — Problem Statement</div>
+  <div class="ps-block">
+    <div class="ps-label">Confirmed across 5 sources</div>
+    <div class="ps-text">First-time Slice credit card users (age 19–26) treat minimum due as an interest-free grace period because the app never shows the financial consequence before payment — leading to compounding interest charges, unexpected GST, and deep loss of trust in the product. <em>Even users who eventually understand billing learned it from external materials — not from the app itself. This is a systematic UI failure.</em></div>
+    <div class="ps-sources">Sources: User interviews · r/IndiaFinance · Play Store reviews (late 2025–mid 2026) · Fintech forums</div>
+  </div>
+</section>
+
+<div class="cs-divider"></div>
+
+<!-- PERSONA -->
+<section id="persona" class="cs-section">
+  <div class="section-eyebrow">03 — Persona</div>
+  <h2 class="section-title">Meet Rohan</h2>
+  <p class="section-lead">Synthesized from user interviews, Reddit research, and Play Store analysis. Not invented — derived.</p>
+
+  <div class="persona-wrap">
+    <div class="persona-card">
+      <div class="persona-header">
+        <div class="persona-avatar">RK</div>
+        <div class="persona-name">Rohan Kulkarni</div>
+        <div class="persona-tagline">22 · Engineering student · Nagpur</div>
+      </div>
+      <div class="persona-body">
+        <div class="persona-grid">
+          <div class="persona-item"><div class="pi-label">Monthly income</div><div class="pi-val">₹0–15,000 stipend</div></div>
+          <div class="persona-item"><div class="pi-label">Slice usage</div><div class="pi-val">3–4x per week</div></div>
+          <div class="persona-item"><div class="pi-label">Card tenure</div><div class="pi-val">0–6 months</div></div>
+          <div class="persona-item"><div class="pi-label">Credit experience</div><div class="pi-val">Zero — first card</div></div>
+          <div class="persona-item"><div class="pi-label">Primary use</div><div class="pi-val">Swiggy, Amazon, college</div></div>
+          <div class="persona-item"><div class="pi-label">Why Slice</div><div class="pi-val">No documents, instant</div></div>
+        </div>
+        <div class="persona-section-label" style="margin-bottom:8px;">Behaviour</div>
+        <div class="persona-bullet">Opens the app only when a bill arrives — no habit of checking balance proactively</div>
+        <div class="persona-bullet">Sees full due and minimum due — always picks minimum when money is tight, assuming it's safe</div>
+        <div class="persona-bullet">Has never been taught what a billing cycle, due date, or APR means — not by Slice, not by anyone</div>
+        <div class="persona-bullet">When confused, asks friends first, then Reddit — never reads FAQs</div>
+        <div class="persona-quote">"I just want to know — if I pay this amount right now, will I be charged anything extra next month? Just tell me yes or no before I pay."</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div class="pain-goal-wrap">
+        <div class="pain-item"><div class="pain-title">Invisible consequences</div><div class="pain-desc">No warning shown before paying minimum due. Interest and GST only appear on the next statement — after the damage is done.</div></div>
+        <div class="pain-item"><div class="pain-title">Can't pay exact amount</div><div class="pain-desc">Slider UI forces rounded amounts. Can't pay exactly ₹4,780 — forced to choose ₹4,500 or ₹5,000.</div></div>
+        <div class="pain-item"><div class="pain-title">Zero financial education from app</div><div class="pain-desc">Slice never explained billing cycles during onboarding or at payment time. Rohan is left to figure it out after getting financially hurt.</div></div>
+        <div class="goal-item"><div class="goal-title">Use credit without fear</div><div class="goal-desc">Wants to enjoy the card's benefits without worrying about hidden charges appearing next month.</div></div>
+        <div class="goal-item"><div class="goal-title">Know before he pays</div><div class="goal-desc">"If I pay this amount, will I be charged anything extra?" — clear yes or no before confirming.</div></div>
+        <div class="goal-item"><div class="goal-title">Stay in control of his money</div><div class="goal-desc">Wants to see exactly what he owes, when, and what each payment choice costs him — in plain language.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="journey-wrap">
+    <div class="journey-title">Rohan's journey with his Slice bill this month</div>
+    <div class="journey-steps">
+      <div class="journey-step">
+        <div class="js-dot" style="background:#EDFFF3;border-color:#34C759;">🎉</div>
+        <div class="js-label">Gets Slice card</div>
+        <div class="js-emotion" style="color:#1A7F3C;">Excited</div>
+      </div>
+      <div class="journey-step">
+        <div class="js-dot" style="background:#EBF5FF;border-color:#0066CC;">🛒</div>
+        <div class="js-label">Spends freely</div>
+        <div class="js-emotion" style="color:#0055AA;">Confident</div>
+      </div>
+      <div class="journey-step">
+        <div class="js-dot" style="background:#FFF8E7;border-color:#FFB800;">📄</div>
+        <div class="js-label">Bill of ₹8,000 arrives</div>
+        <div class="js-emotion" style="color:#886600;">Anxious</div>
+      </div>
+      <div class="journey-step">
+        <div class="js-dot" style="background:#FFF8E7;border-color:#FFB800;">💸</div>
+        <div class="js-label">Pays ₹800 min due</div>
+        <div class="js-emotion" style="color:#886600;">Relieved (wrongly)</div>
+      </div>
+      <div class="journey-step">
+        <div class="js-dot" style="background:var(--danger-bg);border-color:var(--danger);">😡</div>
+        <div class="js-label">Next bill: +interest +GST</div>
+        <div class="js-emotion" style="color:var(--danger-dark);">Shocked, angry</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cs-divider"></div>
+
+<!-- IDEATION -->
+<section id="ideation" class="cs-section">
+  <div class="section-eyebrow">04 — Ideation</div>
+  <h2 class="section-title">3 ideas. 1 chosen.</h2>
+  <p class="section-lead">How might we help first-time Slice credit card users understand the real cost of paying minimum due — before they confirm payment — so they never face an unexpected interest charge?</p>
+
+  <div class="ideas-grid">
+    <div class="idea-card">
+      <div class="idea-header">
+        <div class="idea-letter letter-neutral">A</div>
+        <div>
+          <div class="idea-title">Onboarding education module <span class="idea-verdict verdict-reject">Rejected</span></div>
+          <div class="idea-desc">A 3-screen mini tutorial shown once after the first bill is generated. Explains billing cycle, due date, minimum vs full, and interest rate in simple language.</div>
+        </div>
+      </div>
+      <div class="idea-body">
+        <div class="pros-cons">
+          <div class="pros"><div class="pc-label">✓ Pros</div><div class="pc-item">Sets expectations early, before damage is done</div><div class="pc-item">One-time effort</div></div>
+          <div class="cons"><div class="pc-label">✗ Cons</div><div class="pc-item">Users skip tutorials when a bill has just arrived</div><div class="pc-item">Doesn't help at the actual payment decision point</div><div class="pc-item">Doesn't solve root cause</div></div>
+        </div>
+        <div class="score-pills"><div class="score-pill"><div class="pill-dot dot-mid"></div>User impact: medium</div><div class="score-pill"><div class="pill-dot dot-high"></div>Effort: low</div><div class="score-pill"><div class="pill-dot dot-low"></div>Solves root cause: no</div></div>
+      </div>
+    </div>
+
+    <div class="idea-card chosen">
+      <div class="idea-header">
+        <div class="idea-letter letter-chosen">B</div>
+        <div>
+          <div class="idea-title">Consequence preview on billing screen <span class="idea-verdict verdict-chosen">Chosen</span></div>
+          <div class="idea-desc">A real-time nudge triggered the moment a user taps "Minimum Due" — showing the exact interest amount they will be charged next month in rupees, before they confirm. Also replaces the slider with a numeric input field.</div>
+        </div>
+      </div>
+      <div class="idea-body">
+        <div class="pros-cons">
+          <div class="pros"><div class="pc-label">✓ Pros</div><div class="pc-item">Intervenes at the exact moment of decision</div><div class="pc-item">Shows ₹ consequence — not abstract % APR</div><div class="pc-item">No new screens needed</div><div class="pc-item">Easy to A/B test cleanly</div><div class="pc-item">Directly rooted in user research</div></div>
+          <div class="cons"><div class="pc-label">✗ Cons</div><div class="pc-item">Users who can't afford full may feel anxious</div><div class="pc-item">Needs real-time backend interest calculation</div></div>
+        </div>
+        <div class="score-pills"><div class="score-pill"><div class="pill-dot dot-high"></div>User impact: high</div><div class="score-pill"><div class="pill-dot dot-mid"></div>Effort: medium</div><div class="score-pill"><div class="pill-dot dot-high"></div>Solves root cause: yes</div></div>
+        <div class="chosen-reason"><strong>Why this wins:</strong> It solves the problem at the exact moment it occurs. Rohan's core need was "tell me before I pay" — this does exactly that, in rupees (not percentages), at the exact screen where he decides. The slider fix is bundled in because we're already touching the billing screen — two confirmed problems solved for the cost of one sprint.</div>
+      </div>
+    </div>
+
+    <div class="idea-card">
+      <div class="idea-header">
+        <div class="idea-letter letter-neutral">C</div>
+        <div>
+          <div class="idea-title">Smart push notification reminder <span class="idea-verdict verdict-reject">Rejected</span></div>
+          <div class="idea-desc">A personalized push notification 3 days before due date linking to an interest calculator. Gives the user time to plan before due date pressure hits.</div>
+        </div>
+      </div>
+      <div class="idea-body">
+        <div class="pros-cons">
+          <div class="pros"><div class="pc-label">✓ Pros</div><div class="pc-item">Gives time to plan ahead</div><div class="pc-item">Works even if user doesn't open app regularly</div></div>
+          <div class="cons"><div class="pc-label">✗ Cons</div><div class="pc-item">Push notifications ignored — under 5% open rate</div><div class="pc-item">Requires notification permissions many deny</div><div class="pc-item">Two steps from payment — high drop-off</div></div>
+        </div>
+        <div class="score-pills"><div class="score-pill"><div class="pill-dot dot-mid"></div>User impact: medium</div><div class="score-pill"><div class="pill-dot dot-mid"></div>Effort: medium</div><div class="score-pill"><div class="pill-dot dot-mid"></div>Solves root cause: partially</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="compare-wrap">
+    <table class="compare-table">
+      <thead><tr><th>Criteria</th><th>A — Onboarding module</th><th class="chosen-col">B — Consequence preview ⭐</th><th>C — Push notification</th></tr></thead>
+      <tbody>
+        <tr><td>Solves at decision moment?</td><td>No — too early</td><td class="win">Yes — right at payment</td><td>Partially — before payment</td></tr>
+        <tr><td>Rooted in user research?</td><td>Partially</td><td class="win">Directly — "tell me before I pay"</td><td>Partially</td></tr>
+        <tr><td>Works if user skips steps?</td><td>No — skippable</td><td class="win">Yes — in-flow, can't miss</td><td>No — notification ignored</td></tr>
+        <tr><td>New screens needed?</td><td>3 new screens</td><td class="win">0 — modifies existing screen</td><td>1 new calculator screen</td></tr>
+        <tr><td>Clean A/B testable?</td><td>Hard to measure</td><td class="win">Yes — clear binary metric</td><td>Yes — but low open rates</td></tr>
+        <tr><td>Fixes slider UI bug too?</td><td>No</td><td class="win">Yes — adds numeric input</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section-eyebrow" style="margin-top:0;">Design Principles</div>
+  <div class="principles-grid">
+    <div class="principle-card"><div class="principle-icon">₹</div><div class="principle-title">Show rupees, not percentages</div><div class="principle-desc">Rohan doesn't know what 36% APR means. He understands "₹640 extra next month." Concrete rupee amounts — always.</div></div>
+    <div class="principle-card"><div class="principle-icon">⏱</div><div class="principle-title">Intervene at the moment of decision</div><div class="principle-desc">Education before the bill arrives is ignored. Regret after the charge hits is useless. The billing screen — right before swipe — is the only moment that matters.</div></div>
+    <div class="principle-card"><div class="principle-icon">🤝</div><div class="principle-title">Inform, don't restrict</div><div class="principle-desc">If Rohan genuinely can't pay full, the UI should not shame him. Show the consequence clearly, then let him decide. Respect his agency.</div></div>
+    <div class="principle-card"><div class="principle-icon">🔧</div><div class="principle-title">Fix two problems, one sprint</div><div class="principle-desc">Since we're touching the billing screen anyway, replace the slider with a numeric input — solving the exact-payment bug confirmed by Play Store reviews. No extra cost.</div></div>
+  </div>
+</section>
+
+<!-- SCREENS -->
+<section id="design" class="cs-section-full screens-section">
+  <div class="cs-section" style="padding-bottom:0;">
+    <div class="section-eyebrow">05 — Design</div>
+    <h2 class="section-title" style="color:#fff;">6 screens. 2 problems solved.</h2>
+    <p class="section-lead">Every design decision is annotated with the research that justified it.</p>
+  </div>
+
+  <div style="padding:0 80px;">
+  <div class="screens-grid">
+
+    <!-- Screen 1 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">01</div>
+      <div class="screen-badge">Current UI — Before ❌</div>
+      <div class="phone before">
+        <div style="background:#5A2D9B;"><div class="ph-status" style="padding-top:8px;"><span style="color:#fff;font-size:9px;font-weight:700;">9:41</span><span style="color:#fff;font-size:8px;">●●● ▮</span></div>
+        <div class="ph-header"><div class="ph-back" style="color:rgba(255,255,255,0.6);">← Pay Bill</div><div class="ph-title" style="color:#fff;">Monthly Statement</div><div class="ph-sub" style="color:rgba(255,255,255,0.6);">1 May – 31 May 2026</div></div></div>
+        <div class="ph-card"><div class="ph-card-label">Total Due</div><div class="ph-card-amount">₹8,000</div><div class="ph-card-due">Due by 15 June 2026</div></div>
+        <div class="ph-slider-label">Select amount to pay</div>
+        <div class="ph-slider-track"><div class="ph-slider-fill"></div><div class="ph-slider-thumb"></div></div>
+        <div class="ph-amounts"><span>₹800</span><span>₹8,000</span></div>
+        <div class="ph-btns"><div class="ph-btn-full">Pay Full Due — ₹8,000</div><div class="ph-btn-min">Pay Minimum — ₹800</div></div>
+        <div class="redcircle" style="top:163px;right:12px;">1</div>
+        <div class="redcircle" style="top:202px;left:50%;transform:translateX(-50%);">2</div>
+        <div class="redcircle" style="top:296px;right:12px;">3</div>
+      </div>
+      <div class="ann-card">
+        <strong>❌ 3 problems marked</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#FF3B30;"></div><div class="ann-text">① No APR or interest rate shown anywhere</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#FF3B30;"></div><div class="ann-text">② Slider forces rounded amounts — exact payment impossible</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#FF3B30;"></div><div class="ann-text">③ Min due looks identical to full due — zero consequence signal</div></div>
+      </div>
+    </div>
+
+    <!-- Screen 2 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">02</div>
+      <div class="screen-badge">Redesigned Billing ⭐ Hero</div>
+      <div class="phone hero-phone">
+        <div style="background:#5A2D9B;"><div class="ph-status" style="padding-top:8px;"><span style="color:#fff;font-size:9px;font-weight:700;">9:41</span><span style="color:#fff;font-size:8px;">●●● ▮</span></div>
+        <div class="ph-header"><div class="ph-back" style="color:rgba(255,255,255,0.6);">← Back</div><div class="ph-title" style="color:#fff;">Pay Your Bill</div><div class="ph-sub" style="color:rgba(255,255,255,0.6);">Due 15 June 2026</div></div></div>
+        <div class="ph-card"><div class="ph-card-label">Total Due</div><div class="ph-card-amount">₹8,000</div><div class="ph-card-due">15 June 2026</div></div>
+        <div class="ph-input-wrap"><div class="ph-input-label">Enter amount to pay</div><div class="ph-input">₹800</div><div class="ph-input-hint" style="color:#999;font-size:7.5px;">Pay any amount ₹800–₹8,000</div></div>
+        <div class="ph-chips"><div class="ph-chip chip-sel">Pay Full ₹8,000</div><div class="ph-chip chip-danger">Min ₹800 ⚠</div></div>
+        <div class="ph-warn">
+          <div class="ph-warn-head"><span style="font-size:10px;">⚠️</span><span class="ph-warn-title">Paying minimum due</span><span class="ph-warn-pill">INTEREST</span></div>
+          <div class="ph-warn-row"><span class="ph-warn-lbl">Interest on ₹7,200</span><span class="ph-warn-val">₹640</span></div>
+          <div class="ph-warn-row"><span class="ph-warn-lbl">GST on interest</span><span class="ph-warn-val">₹115</span></div>
+          <div class="ph-warn-div"></div>
+          <div class="ph-warn-row"><span class="ph-warn-lbl" style="font-weight:800;color:#CC0000;">Extra next month</span><span class="ph-warn-val" style="font-size:9px;">₹755</span></div>
+          <div class="ph-warn-link">How is this calculated? →</div>
+        </div>
+        <div class="ph-cta">Confirm Payment →</div>
+      </div>
+      <div class="ann-card">
+        <strong>✅ 2 problems solved</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">Numeric input replaces slider — exact rupee payment now possible</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">Warning shows ₹755 consequence before payment — not after</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Rooted in research: "tell me before I pay" — fulfilled exactly</div></div>
+      </div>
+    </div>
+
+    <!-- Screen 3 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">03</div>
+      <div class="screen-badge">Interest Breakdown Modal</div>
+      <div class="phone">
+        <div class="ph-status"><span style="font-size:9px;font-weight:700;">9:41</span><span style="font-size:8px;">●●● ▮</span></div>
+        <div style="background:#F8F4FF;height:70px;display:flex;align-items:center;padding:0 12px;"><div><div style="font-size:8px;color:#888;">Pay Your Bill</div><div style="font-size:16px;font-weight:800;color:#5A2D9B;">₹8,000</div></div></div>
+        <div class="modal-overlay">
+          <div class="modal-sheet">
+            <div class="modal-handle"></div>
+            <div class="modal-title">How interest is calculated</div>
+            <div class="modal-row"><span class="mr-lbl">Balance after minimum</span><span class="mr-val">₹7,200</span></div>
+            <div class="modal-row"><span class="mr-lbl">Monthly rate</span><span class="mr-val red">3% / month</span></div>
+            <div class="modal-row"><span class="mr-lbl">Interest charged</span><span class="mr-val red">₹640</span></div>
+            <div class="modal-row"><span class="mr-lbl">GST on interest (18%)</span><span class="mr-val red">₹115</span></div>
+            <div class="modal-row" style="border:none;padding-top:6px;"><span class="mr-lbl" style="font-weight:800;color:#CC0000;font-size:9px;">Total extra next month</span><span class="mr-val big">₹755</span></div>
+            <div class="modal-tip">💡 Paying full due every month = ₹0 interest. Always.</div>
+            <div class="modal-btn-p">Pay Full ₹8,000 instead</div>
+            <div class="modal-btn-s">Pay minimum anyway</div>
+          </div>
+        </div>
+      </div>
+      <div class="ann-card">
+        <strong>💡 On-demand depth</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Only opens when user taps "How calculated?" — no forced interruption</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">"Pay minimum anyway" preserved — inform, never restrict</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Total row is bolder and red — scannable hierarchy</div></div>
+      </div>
+    </div>
+
+    <!-- Screen 4 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">04</div>
+      <div class="screen-badge">Payment Success ✓</div>
+      <div class="phone success-phone" style="display:flex;flex-direction:column;">
+        <div style="background:#5A2D9B;"><div class="ph-status" style="padding-top:8px;"><span style="color:#fff;font-size:9px;font-weight:700;">9:42</span><span style="color:#fff;font-size:8px;">●●● ▮</span></div></div>
+        <div class="suc-body">
+          <div class="suc-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+          <div class="suc-title">Payment Successful!</div>
+          <div class="suc-sub">2 June 2026 · 9:42 AM</div>
+          <div class="suc-hero-box"><div class="suc-hero-text">✓ No interest this month<br/>Clear until 15 July 2026</div></div>
+          <div class="suc-summary">
+            <div class="suc-row"><span class="suc-lbl">Amount paid</span><span class="suc-val">₹8,000</span></div>
+            <div class="suc-row"><span class="suc-lbl">Next due date</span><span class="suc-val">15 Jul 2026</span></div>
+            <div class="suc-row"><span class="suc-lbl">Interest charged</span><span class="suc-val green">₹0 ✓</span></div>
+          </div>
+        </div>
+        <div class="ph-cta bottom-cta">Back to Home</div>
+      </div>
+      <div class="ann-card">
+        <strong>🎯 Habit building</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">"No interest" is the hero message — more important than the amount</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">₹0 shown explicitly — closes the loop Rohan needed closed</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Positive reinforcement builds full-payment habit over time</div></div>
+      </div>
+    </div>
+
+    <!-- Screen 5 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">05</div>
+      <div class="screen-badge">Home Screen Nudge</div>
+      <div class="phone">
+        <div style="background:linear-gradient(135deg,#3A1870,#5A2D9B);"><div class="ph-status" style="padding-top:8px;"><span style="color:#fff;font-size:9px;font-weight:700;">9:41</span><span style="color:#fff;font-size:8px;">●●● ▮</span></div>
+        <div style="padding:8px 12px 12px;"><div class="home-greet">Good morning,</div><div class="home-name">Rohan 👋</div><div class="home-limit-lbl">Available limit</div><div class="home-limit">₹12,000</div></div></div>
+        <div class="nudge-card-ph">
+          <div class="nudge-close">✕</div>
+          <div class="nudge-header"><span style="font-size:12px;">📅</span><span class="nudge-title">Bill due in 3 days</span><span class="nudge-pill">₹8,000</span></div>
+          <div class="nudge-row"><span class="nudge-lbl">Pay full ₹8,000</span><span class="nudge-val g">→ No interest ✓</span></div>
+          <div class="nudge-divider"></div>
+          <div class="nudge-row"><span class="nudge-lbl">Pay min ₹800</span><span class="nudge-val r">→ +₹755 next month</span></div>
+          <div class="nudge-btn">Pay Now — One tap →</div>
+        </div>
+        <div class="home-mini-cards">
+          <div class="mini-card"><div class="mini-lbl">Spent</div><div class="mini-val">₹8,000</div></div>
+          <div class="mini-card"><div class="mini-lbl">Due</div><div class="mini-val">15 Jun</div></div>
+          <div class="mini-card"><div class="mini-lbl">Rewards</div><div class="mini-val">240 pts</div></div>
+        </div>
+      </div>
+      <div class="ann-card">
+        <strong>⏰ Pre-payment awareness</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Shows consequence comparison 3 days early — time to plan</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">One-tap Pay Now deep links to billing, full due pre-filled</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Dismissible — respects users who've already paid</div></div>
+      </div>
+    </div>
+
+    <!-- Screen 6 -->
+    <div class="screen-wrap">
+      <div class="screen-num-label">06</div>
+      <div class="screen-badge">Edge Case — Partial Pay</div>
+      <div class="phone">
+        <div style="background:#5A2D9B;"><div class="ph-status" style="padding-top:8px;"><span style="color:#fff;font-size:9px;font-weight:700;">9:41</span><span style="color:#fff;font-size:8px;">●●● ▮</span></div>
+        <div class="ph-header"><div class="ph-back" style="color:rgba(255,255,255,0.6);">← Back</div><div class="ph-title" style="color:#fff;">Pay Your Bill</div><div class="ph-sub" style="color:rgba(255,255,255,0.6);">Due 15 June 2026</div></div></div>
+        <div class="ph-card"><div class="ph-card-label">Total Due</div><div class="ph-card-amount">₹8,000</div><div class="ph-card-due">15 June 2026</div></div>
+        <div class="ph-input-wrap"><div class="ph-input-label">Enter amount to pay</div><div class="ph-input warn-input">₹3,500</div><div class="ph-input-hint" style="color:#CC6600;">Partial — interest applies on remaining</div></div>
+        <div class="live-box">
+          <div class="lb-head">↻ Live calculation</div>
+          <div class="lb-row"><span class="lb-lbl">Remaining balance</span><span class="lb-val">₹4,500</span></div>
+          <div class="lb-row"><span class="lb-lbl">Interest (3%/month)</span><span class="lb-val orange">₹405</span></div>
+          <div class="lb-row"><span class="lb-lbl">GST on interest</span><span class="lb-val orange">₹73</span></div>
+          <div class="lb-div"></div>
+          <div class="lb-row"><span class="lb-total-lbl">Extra next month</span><span class="lb-total-val">₹478</span></div>
+        </div>
+        <div class="tip-box-ph">💡 The more you pay now, the less interest next month.</div>
+        <div class="ph-cta">Confirm ₹3,500 →</div>
+      </div>
+      <div class="ann-card">
+        <strong>🧠 Beyond the happy path</strong>
+        <div class="ann-item"><div class="ann-dot" style="background:#FF9500;"></div><div class="ann-text">Input turns amber on partial — visual signal interest applies</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#34C759;"></div><div class="ann-text">Live calculation updates as user types — real-time feedback</div></div>
+        <div class="ann-item"><div class="ann-dot" style="background:#C4A8F0;"></div><div class="ann-text">Tip is supportive — "pay more if you can" not "you're wrong"</div></div>
+      </div>
+    </div>
+
+  </div>
+  </div>
+</section>
+
+<!-- METRICS -->
+<section id="metrics" class="cs-section">
+  <div class="section-eyebrow">06 — Metrics</div>
+  <h2 class="section-title">How we'd measure success</h2>
+  <p class="section-lead">One primary metric. Two secondary signals. One clean A/B test. Hypothetical — but designed to be real.</p>
+
+  <div class="metrics-grid">
+    <div class="metric-card primary">
+      <div class="metric-icon">📊</div>
+      <div class="metric-title">Primary Metric</div>
+      <div class="metric-desc">Percentage of new users (0–90 days) who pay full due in their first 3 billing cycles. This directly measures whether the consequence preview changed behaviour — not just awareness.</div>
+      <div class="metric-target">Target: +25% full payment rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🎫</div>
+      <div class="metric-title">Secondary — Support Tickets</div>
+      <div class="metric-desc">Track volume of support tickets tagged "unexpected interest charge" or "surprise billing" per month. A successful feature should reduce this category by at least 30% within 60 days of shipping.</div>
+      <div class="metric-target">Target: −30% complaint volume</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">⭐</div>
+      <div class="metric-title">Secondary — Billing Clarity</div>
+      <div class="metric-desc">Post-payment single-question survey: "Did you understand what you were charged today?" Sent once to new users after their first bill payment. Baseline vs post-launch comparison.</div>
+      <div class="metric-target">Target: 80%+ respond "yes"</div>
+    </div>
+  </div>
+
+  <div class="abtest-wrap">
+    <div class="abtest-title">A/B Test Plan</div>
+    <div class="abtest-grid">
+      <div class="ab-box">
+        <div class="ab-label">Control Group (50%)</div>
+        <div class="ab-title">Current Slice billing screen</div>
+        <div class="ab-desc">Existing slider UI with no consequence preview. Minimum due and full due look identical. No interest information shown before payment.</div>
+      </div>
+      <div class="vs-circle">VS</div>
+      <div class="ab-box" style="border-color:var(--purple);">
+        <div class="ab-label">Test Group (50%)</div>
+        <div class="ab-title">Redesigned billing screen</div>
+        <div class="ab-desc">New numeric input replacing slider. Consequence preview banner triggered on minimum due selection. Interest shown in rupees before confirmation.</div>
+      </div>
+    </div>
+    <div class="abtest-specs">
+      <div class="abtest-spec"><div class="abtest-spec-label">Test duration</div><div class="abtest-spec-val">6 weeks</div></div>
+      <div class="abtest-spec"><div class="abtest-spec-label">Covers</div><div class="abtest-spec-val">2 billing cycles</div></div>
+      <div class="abtest-spec"><div class="abtest-spec-label">Target users</div><div class="abtest-spec-val">New users only (0–90 days)</div></div>
+      <div class="abtest-spec"><div class="abtest-spec-label">Ship threshold</div><div class="abtest-spec-val">+20% full payment rate</div></div>
+    </div>
+  </div>
+</section>
+
+<div class="cs-divider"></div>
+
+<!-- LEARNINGS -->
+<section id="learnings" class="cs-section">
+  <div class="section-eyebrow">07 — Learnings</div>
+  <h2 class="section-title">What I'd do differently</h2>
+  <p class="section-lead">Honest reflection on the process — what worked, what I'd improve, and what I'd explore next.</p>
+
+  <div class="learnings-grid">
+    <div class="learning-card">
+      <div class="learning-num">01</div>
+      <div class="learning-title">I'd talk to more Slice card users specifically</div>
+      <div class="learning-desc">Only one of my two interview participants used Slice as a credit card. For a fintech case study, I'd recruit at least 4–5 active card users who have received at least 2 bills. Reddit and Play Store filled the gap — but primary research is always stronger than secondary.</div>
+    </div>
+    <div class="learning-card">
+      <div class="learning-num">02</div>
+      <div class="learning-title">I'd usability test the screens with real users before finalising</div>
+      <div class="learning-desc">After designing all 6 screens, I moved straight to metrics — skipping a usability test. I should have shown the billing screen redesign to 2–3 real Slice users and asked: "Walk me through what you'd do here." That would catch whether the warning banner was actually noticed, whether "₹755 extra next month" was understood, and whether the numeric input caused any confusion — before treating the design as final. Designing without user feedback on the screens is the same mistake Slice made with their billing UI.</div>
+    </div>
+    <div class="learning-card">
+      <div class="learning-num">03</div>
+      <div class="learning-title">The edge case screen was the most valuable design</div>
+      <div class="learning-desc">Screen 6 — the partial payment live calculator — was the hardest to design and the most revealing. Thinking about users who genuinely can't pay the full amount led to the "inform, not restrict" design principle, which then shaped every other screen. I'd start with edge cases earlier next time.</div>
+    </div>
+    <div class="learning-card">
+      <div class="learning-num">04</div>
+      <div class="learning-title">I'd scope the onboarding problem as a future iteration</div>
+      <div class="learning-desc">Research revealed that even informed users learned billing from a physical manual — not the app. A future version of this solution should include a lightweight onboarding moment after the first bill is generated. Not a tutorial — just a one-screen explainer that Rohan sees once, contextually, when it matters.</div>
+    </div>
+  </div>
+
+  <div class="section-eyebrow">Next Steps</div>
+  <div class="next-steps">
+    <div class="next-step"><div class="ns-icon">🧪</div><div class="ns-text"><strong>Ship to 5% of users first.</strong> Before the full A/B test, release to a small cohort (5%) to catch any technical issues with the real-time interest calculation from the backend. Monitor for errors, edge cases, and unexpected user behaviour.</div></div>
+    <div class="next-step"><div class="ns-icon">📱</div><div class="ns-text"><strong>Run the 6-week A/B test.</strong> 50/50 split, new users only, 2 full billing cycles. Primary metric: full payment rate. Secondary: support ticket volume and billing clarity survey score.</div></div>
+    <div class="next-step"><div class="ns-icon">🔄</div><div class="ns-text"><strong>Iterate based on results.</strong> If full payment rate increases but support tickets don't drop — investigate whether interest calculation accuracy is the issue. If neither moves — revisit whether the consequence preview is visible enough or triggers at the right moment.</div></div>
+    <div class="next-step"><div class="ns-icon">📋</div><div class="ns-text"><strong>Tackle onboarding as Phase 2.</strong> Once the billing screen is fixed, address the upstream problem: new users getting their first bill with no context. A one-screen contextual explainer after bill generation — not a tutorial — built on the same "rupees, not percentages" design principle.</div></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="cs-footer">
+  <div>
+    <div class="footer-logo">slice<span>/cs</span></div>
+    <div style="font-size:13px;color:rgba(255,255,255,0.4);margin-top:6px;">A product case study for APM roles</div>
+  </div>
+  <div class="footer-meta">
+    Problem · Research · Solution · Metrics<br/>
+    Built for entry-level product portfolios · 2026
+  </div>
+</footer>
+
+</body>
+</html>
